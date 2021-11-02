@@ -9,6 +9,7 @@ import datetime
 import json
 import jsonschema
 from jsonschema import validate
+import requests
 
 parser = configparser.ConfigParser()
 parser.read("../pipeline.conf")
@@ -19,51 +20,33 @@ api_key = parser.get("openweathermap", "api-key")
 
 url="http://api.openweathermap.org/data/2.5/weather?q=Spain&appid=" + api_key
 
-context = SparkContext(master="local[*]", appName="readJSON")
-spark = SparkSession.builder.getOrCreate()
+def get_schema():
+    """This function loads the given schema available"""
+    with open('api-json-schema.json', 'r') as file:
+        schema = json.load(file)
+    return schema
 
-schema = StructType([
-        StructField("main", StructType([
-            StructField("temp", FloatType()),
-            StructField("feels_like", FloatType()),
-            StructField("temp_min", FloatType()),
-            StructField("temp_max", FloatType()),
-            StructField("pressure", FloatType()),
-            StructField("humidity", FloatType())
-        ])),
-        StructField("id", IntegerType()),
-        StructField("name", StringType())
-])
+def validate_json(json_data):
+    execute_api_schema = get_schema()
 
-# read json api
-httpData = urlopen(url).read().decode('utf-8')
-print(httpData)
+    try:
+        validate(instance=json_data, schema=execute_api_schema)
+    except jsonschema.exceptions.ValidationError as err:
+        print(err)
+        err = "Given JSON data is InValid"
+        return False, err
 
-# convert to dataframe with an imposed schema to make sure that the structure is correct. We might do this as well with json-schemas (in json format)
-rdd = context.parallelize([httpData])
-jsonDF = spark.read.json(rdd, schema=schema)
-jsonDF.printSchema()
-# root
-#  |-- main: struct (nullable = true)
-#  |    |-- temp: float (nullable = true)
-#  |    |-- feels_like: float (nullable = true)
-#  |    |-- temp_min: float (nullable = true)
-#  |    |-- temp_max: float (nullable = true)
-#  |    |-- pressure: float (nullable = true)
-#  |    |-- humidity: float (nullable = true)
-#  |-- id: integer (nullable = true)
-#  |-- name: string (nullable = true)
+    message = "Given JSON data is Valid"
+    return True, message
 
-jsonDF.show()
-# +--------------------+-------+-----+
-# |                main|     id| name|
-# +--------------------+-------+-----+
-# |{282.57, 280.01, ...|2510769|Spain|
-# +--------------------+-------+-----+
+# call api
+inJson = requests.get(url).json()
+print(inJson) # dict
 
-inJson = jsonDF.toJSON().first()
-print(inJson)
-# {"main":{"temp":283.38,"feels_like":282.6,"temp_min":282.45,"temp_max":284.31,"pressure":1016.0,"humidity":82.0},"id":2510769,"name":"Spain"}
+# validate api response schema
+is_valid, msg = validate_json(inJson)
+print(msg)
+
 
 # write json into s3
 s3 = boto3.resource(
@@ -76,6 +59,6 @@ s3 = boto3.resource(
 now = datetime.datetime.now()
 s3object = s3.Object(bucket_name, f'{now.year}-{now.month}-{now.day}/{now.hour}_{now.minute}_{now.second}.json')
 s3object.put(
-    Body=(bytes(inJson.encode('UTF-8')))
+    Body=(bytes(json.dumps(inJson).encode('UTF-8')))
 )
 

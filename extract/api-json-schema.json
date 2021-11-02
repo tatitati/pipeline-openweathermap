@@ -1,24 +1,41 @@
 {
    "$schema":"http://json-schema.org/draft-04/schema#",
    "title":"User",
-   "description":"A user request json",
    "type":"object",
    "properties":{
       "id":{
-         "description":"The unique identifier for a user",
          "type":"integer"
       },
       "name":{
-         "description":"Name of the user",
          "type":"string"
       },
-      "contact_number":{
-         "type":"number"
+      "main": {
+         "type": "object",
+         "properties": {
+            "temp":{
+               "type": "number"
+            },
+            "feels_like": {
+               "type": "number"
+            },
+            "temp_min": {
+               "type": "number"
+            },
+            "temp_max": {
+               "type": "number"
+            },
+            "pressure": {
+               "type": "number"
+            },
+            "humidity": {
+               "type": "number"
+            }
+         }
       }
    },
    "required":[
       "id",
       "name",
-      "contact_number"
+      "main"
    ]
 }
