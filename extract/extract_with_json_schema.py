@@ -1,8 +1,4 @@
-#!/usr/local/bin/python3
-from pyspark.sql import SparkSession
-from pyspark import SparkContext
-from urllib.request import Request, urlopen
-from pyspark.sql.types import *
+#!/usr/local/bin/python3s
 import boto3
 import configparser
 import datetime
