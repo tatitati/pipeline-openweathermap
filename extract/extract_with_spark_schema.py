@@ -4,12 +4,17 @@ from pyspark import SparkContext
 from urllib.request import Request, urlopen
 from pyspark.sql.types import *
 import boto3
-import  configparser
+import configparser
 import datetime
-import json
+import os
 
+parser = configparser.ConfigParser()
+parser.read("pipeline.conf")
+access_key = parser.get("aws_boto_credentials", "access_key")
+secret_key = parser.get("aws_boto_credentials", "secret_key")
+bucket_name = parser.get("aws_boto_credentials", "bucket_name")
+api_key = parser.get("openweathermap", "api-key")
 
-api_key="d36c3cddd264fb3b5f8effa8a3c41555"
 countries = ["Spain", "India", "France", "Vietnam", "China"]
 context = SparkContext(master="local[*]", appName="readJSON")
 spark = SparkSession.builder.getOrCreate()
@@ -63,16 +68,9 @@ for country in countries:
     print(inJson)
     # {"main":{"temp":283.38,"feels_like":282.6,"temp_min":282.45,"temp_max":284.31,"pressure":1016.0,"humidity":82.0},"id":2510769,"name":"Spain"}
 
-with open("responses.json", 'a') as outfile1:
+with open("extract/responses.json", 'a') as outfile1:
     for row in responsesAcc:
         outfile1.write(row + '\n')
-
-# write json into s3
-parser = configparser.ConfigParser()
-parser.read("pipeline.conf")
-access_key = parser.get("aws_boto_credentials", "access_key")
-secret_key = parser.get("aws_boto_credentials", "secret_key")
-bucket_name = parser.get("aws_boto_credentials", "bucket_name")
 
 s3 = boto3.resource(
     's3',
@@ -80,10 +78,11 @@ s3 = boto3.resource(
     aws_secret_access_key = secret_key
 )
 
+now = datetime.datetime.now()
+s3_file = f'{now.year}-{now.month}-{now.day}/{now.hour}_{now.minute}_{now.second}.json'
+s3.Bucket(bucket_name).upload_file("extract/responses.json", s3_file)
 
-# now = datetime.datetime.now()
-# s3object = s3.Object(bucket_name, f'{now.year}-{now.month}-{now.day}/{now.hour}_{now.minute}_{now.second}.json')
-# s3object.put(
-#     Body=(bytes(inJson.encode('UTF-8')))
-# )
+# clean
+os.remove("extract/responses.json")
+
 

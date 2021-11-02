@@ -8,7 +8,7 @@ from jsonschema import validate
 import requests
 
 parser = configparser.ConfigParser()
-parser.read("../pipeline.conf")
+parser.read("pipeline.conf")
 access_key = parser.get("aws_boto_credentials", "access_key")
 secret_key = parser.get("aws_boto_credentials", "secret_key")
 bucket_name = parser.get("aws_boto_credentials", "bucket_name")
