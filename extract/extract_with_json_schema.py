@@ -4,13 +4,20 @@ from pyspark import SparkContext
 from urllib.request import Request, urlopen
 from pyspark.sql.types import *
 import boto3
-import  configparser
+import configparser
 import datetime
+import json
+import jsonschema
+from jsonschema import validate
 
+parser = configparser.ConfigParser()
+parser.read("../pipeline.conf")
+access_key = parser.get("aws_boto_credentials", "access_key")
+secret_key = parser.get("aws_boto_credentials", "secret_key")
+bucket_name = parser.get("aws_boto_credentials", "bucket_name")
+api_key = parser.get("openweathermap", "api-key")
 
-api_key="d36c3cddd264fb3b5f8effa8a3c41555"
 url="http://api.openweathermap.org/data/2.5/weather?q=Spain&appid=" + api_key
-
 
 context = SparkContext(master="local[*]", appName="readJSON")
 spark = SparkSession.builder.getOrCreate()
@@ -59,12 +66,6 @@ print(inJson)
 # {"main":{"temp":283.38,"feels_like":282.6,"temp_min":282.45,"temp_max":284.31,"pressure":1016.0,"humidity":82.0},"id":2510769,"name":"Spain"}
 
 # write json into s3
-parser = configparser.ConfigParser()
-parser.read("pipeline.conf")
-access_key = parser.get("aws_boto_credentials", "access_key")
-secret_key = parser.get("aws_boto_credentials", "secret_key")
-bucket_name = parser.get("aws_boto_credentials", "bucket_name")
-
 s3 = boto3.resource(
     's3',
     aws_access_key_id=access_key,
