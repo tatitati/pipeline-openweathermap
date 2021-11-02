@@ -22,7 +22,7 @@ def get_schema():
         schema = json.load(file)
     return schema
 
-def validate_json(json_data):
+def validate_json_schema(json_data):
     execute_api_schema = get_schema()
 
     try:
@@ -40,7 +40,7 @@ inJson = requests.get(url).json()
 print(inJson) # dict
 
 # validate api response schema
-is_valid, msg = validate_json(inJson)
+is_valid, msg = validate_json_schema(inJson)
 print(msg)
 
 
